@@ -105,7 +105,7 @@ export default class OpenTsDatasource {
     const gexpPromises = [];
     if (gExpressions.length > 0) {
       for (let gexpIndex = 0; gexpIndex < gExpressions.length; gexpIndex++) {
-        const gexpPromise = this.performGExpressionQuery(gexpIndex, gExpressions[gexpIndex], start, end).then(
+        const gexpPromise = this.performGExpressionQuery(gexpIndex, gExpressions[gexpIndex], start, end, options).then(
           response => {
             // only index into gexp queries
             const gexpTargets = options.targets.filter(target => {
@@ -249,9 +249,9 @@ export default class OpenTsDatasource {
   }
 
   // retrieve a single gExp via GET to /api/query/gexp
-  performGExpressionQuery(idx, gExp, start, end) {
+  performGExpressionQuery(idx, gExp, start, end, globalOptions) {
     let urlParams = '?start=' + start + '&exp=' + gExp + '&gexpIndex=' + idx;
-
+    urlParams = this.templateSrv.replace(urlParams, globalOptions.scopedVars, 'pipe');
     const options = {
       method: 'GET',
       url: this.url + '/api/query/gexp' + urlParams,
