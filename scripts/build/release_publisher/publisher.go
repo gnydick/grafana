@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/pkg/errors"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -13,47 +12,53 @@ import (
 )
 
 type publisher struct {
-	apiKey         string
-	apiUri         string
-	product        string
-	dryRun         bool
-	enterprise     bool
-	baseArchiveUrl string
-	builder        releaseBuilder
+	apiKey string
 }
 
-type releaseBuilder interface {
-	prepareRelease(baseArchiveUrl, whatsNewUrl string, releaseNotesUrl string, nightly bool) (*release, error)
-}
-
-func (p *publisher) doRelease(whatsNewUrl string, releaseNotesUrl string, nightly bool) error {
-	currentRelease, err := p.builder.prepareRelease(p.baseArchiveUrl, whatsNewUrl, releaseNotesUrl, nightly)
+func (p *publisher) doRelease(version string, whatsNewUrl string, releaseNotesUrl string, dryRun bool) error {
+	currentRelease, err := newRelease(version, whatsNewUrl, releaseNotesUrl, buildArtifactConfigurations, getHttpContents{})
 	if err != nil {
 		return err
 	}
 
-	if err := p.postRelease(currentRelease); err != nil {
-		return err
+	if dryRun {
+		relJson, err := json.Marshal(currentRelease)
+		if err != nil {
+			return err
+		}
+		log.Println(string(relJson))
+
+		for _, b := range currentRelease.Builds {
+			artifactJson, err := json.Marshal(b)
+			if err != nil {
+				return err
+			}
+			log.Println(string(artifactJson))
+		}
+	} else {
+		if err := p.postRelease(currentRelease); err != nil {
+			return err
+		}
 	}
 
 	return nil
 }
 
 func (p *publisher) postRelease(r *release) error {
-	err := p.postRequest("/versions", r, fmt.Sprintf("Create Release %s", r.Version))
+	err := p.postRequest("/grafana/versions", r, fmt.Sprintf("Create Release %s", r.Version))
 	if err != nil {
 		return err
 	}
-	err = p.postRequest("/versions/"+r.Version, r, fmt.Sprintf("Update Release %s", r.Version))
+	err = p.postRequest("/grafana/versions/"+r.Version, r, fmt.Sprintf("Update Release %s", r.Version))
 	if err != nil {
 		return err
 	}
 	for _, b := range r.Builds {
-		err = p.postRequest(fmt.Sprintf("/versions/%s/packages", r.Version), b, fmt.Sprintf("Create Build %s %s", b.Os, b.Arch))
+		err = p.postRequest(fmt.Sprintf("/grafana/versions/%s/packages", r.Version), b, fmt.Sprintf("Create Build %s %s", b.Os, b.Arch))
 		if err != nil {
 			return err
 		}
-		err = p.postRequest(fmt.Sprintf("/versions/%s/packages/%s/%s", r.Version, b.Arch, b.Os), b, fmt.Sprintf("Update Build %s %s", b.Os, b.Arch))
+		err = p.postRequest(fmt.Sprintf("/grafana/versions/%s/packages/%s/%s", r.Version, b.Arch, b.Os), b, fmt.Sprintf("Update Build %s %s", b.Os, b.Arch))
 		if err != nil {
 			return err
 		}
@@ -62,25 +67,7 @@ func (p *publisher) postRelease(r *release) error {
 	return nil
 }
 
-type ReleaseType int
-
-const (
-	STABLE ReleaseType = iota + 1
-	BETA
-	NIGHTLY
-)
-
-func (rt ReleaseType) beta() bool {
-	return rt == BETA
-}
-
-func (rt ReleaseType) stable() bool {
-	return rt == STABLE
-}
-
-func (rt ReleaseType) nightly() bool {
-	return rt == NIGHTLY
-}
+const baseArhiveUrl = "https://s3-us-west-2.amazonaws.com/grafana-releases/release/grafana"
 
 type buildArtifact struct {
 	os         string
@@ -88,7 +75,7 @@ type buildArtifact struct {
 	urlPostfix string
 }
 
-func (t buildArtifact) getUrl(baseArchiveUrl, version string, releaseType ReleaseType) string {
+func (t buildArtifact) getUrl(version string, isBeta bool) string {
 	prefix := "-"
 	rhelReleaseExtra := ""
 
@@ -96,15 +83,15 @@ func (t buildArtifact) getUrl(baseArchiveUrl, version string, releaseType Releas
 		prefix = "_"
 	}
 
-	if releaseType.stable() && t.os == "rhel" {
+	if !isBeta && t.os == "rhel" {
 		rhelReleaseExtra = "-1"
 	}
 
-	url := strings.Join([]string{baseArchiveUrl, prefix, version, rhelReleaseExtra, t.urlPostfix}, "")
+	url := strings.Join([]string{baseArhiveUrl, prefix, version, rhelReleaseExtra, t.urlPostfix}, "")
 	return url
 }
 
-var completeBuildArtifactConfigurations = []buildArtifact{
+var buildArtifactConfigurations = []buildArtifact{
 	{
 		os:         "deb",
 		arch:       "arm64",
@@ -162,42 +149,40 @@ var completeBuildArtifactConfigurations = []buildArtifact{
 	},
 }
 
-type artifactFilter struct {
-	os   string
-	arch string
-}
+func newRelease(rawVersion string, whatsNewUrl string, releaseNotesUrl string, artifactConfigurations []buildArtifact, getter urlGetter) (*release, error) {
+	version := rawVersion[1:]
+	now := time.Now()
+	isBeta := strings.Contains(version, "beta")
 
-func filterBuildArtifacts(filters []artifactFilter) ([]buildArtifact, error) {
-	var artifacts []buildArtifact
-	for _, f := range filters {
-		matched := false
-
-		for _, a := range completeBuildArtifactConfigurations {
-			if f.os == a.os && f.arch == a.arch {
-				artifacts = append(artifacts, a)
-				matched = true
-				break
-			}
+	builds := []build{}
+	for _, ba := range artifactConfigurations {
+		sha256, err := getter.getContents(fmt.Sprintf("%s.sha256", ba.getUrl(version, isBeta)))
+		if err != nil {
+			return nil, err
 		}
-
-		if !matched {
-			return nil, errors.New(fmt.Sprintf("No buildArtifact for os=%v, arch=%v", f.os, f.arch))
-		}
+		builds = append(builds, newBuild(ba, version, isBeta, sha256))
 	}
-	return artifacts, nil
+
+	r := release{
+		Version:         version,
+		ReleaseDate:     time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.Local),
+		Stable:          !isBeta,
+		Beta:            isBeta,
+		Nightly:         false,
+		WhatsNewUrl:     whatsNewUrl,
+		ReleaseNotesUrl: releaseNotesUrl,
+		Builds:          builds,
+	}
+	return &r, nil
 }
 
-func newBuild(baseArchiveUrl string, ba buildArtifact, version string, rt ReleaseType, sha256 string) build {
+func newBuild(ba buildArtifact, version string, isBeta bool, sha256 string) build {
 	return build{
 		Os:     ba.os,
-		Url:    ba.getUrl(baseArchiveUrl, version, rt),
+		Url:    ba.getUrl(version, isBeta),
 		Sha256: sha256,
 		Arch:   ba.arch,
 	}
-}
-
-func (p *publisher) apiUrl(url string) string {
-	return fmt.Sprintf("%s/%s%s", p.apiUri, p.product, url)
 }
 
 func (p *publisher) postRequest(url string, obj interface{}, desc string) error {
@@ -205,14 +190,7 @@ func (p *publisher) postRequest(url string, obj interface{}, desc string) error 
 	if err != nil {
 		return err
 	}
-
-	if p.dryRun {
-		log.Println(fmt.Sprintf("POST to %s:", p.apiUrl(url)))
-		log.Println(string(jsonBytes))
-		return nil
-	}
-
-	req, err := http.NewRequest(http.MethodPost, p.apiUrl(url), bytes.NewReader(jsonBytes))
+	req, err := http.NewRequest(http.MethodPost, baseUri+url, bytes.NewReader(jsonBytes))
 	if err != nil {
 		return err
 	}
@@ -264,4 +242,25 @@ type build struct {
 	Url    string `json:"url"`
 	Sha256 string `json:"sha256"`
 	Arch   string `json:"arch"`
+}
+
+type urlGetter interface {
+	getContents(url string) (string, error)
+}
+
+type getHttpContents struct{}
+
+func (getHttpContents) getContents(url string) (string, error) {
+	response, err := http.Get(url)
+	if err != nil {
+		return "", err
+	}
+
+	defer response.Body.Close()
+	all, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return "", err
+	}
+
+	return string(all), nil
 }

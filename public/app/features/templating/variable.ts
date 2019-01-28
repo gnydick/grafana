@@ -1,4 +1,3 @@
-import _ from 'lodash';
 import { assignModelProperties } from 'app/core/utils/model_utils';
 
 /*
@@ -29,7 +28,6 @@ export { assignModelProperties };
 
 export function containsVariable(...args: any[]) {
   const variableName = args[args.length - 1];
-  args[0] = _.isString(args[0]) ? args[0] : Object['values'](args[0]).join(' ');
   const variableString = args.slice(0, -1).join(' ');
   const matches = variableString.match(variableRegex);
   const isMatchingVariable =

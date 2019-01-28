@@ -48,15 +48,14 @@ export class DashExportCtrl {
     saveAs(blob, dash.title + '-' + new Date().getTime() + '.json');
   }
 
-  private openJsonModal(clone: object) {
-    const model = {
-      object: clone,
-      enableCopy: true,
-    };
+  private openJsonModal(clone: any) {
+    const editScope = this.$rootScope.$new();
+    editScope.object = clone;
+    editScope.enableCopy = true;
 
     this.$rootScope.appEvent('show-modal', {
       src: 'public/app/partials/edit_json.html',
-      model: model,
+      scope: editScope,
     });
 
     this.dismiss();

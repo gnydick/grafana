@@ -14,7 +14,7 @@
 
       .graph-legend-series {
         display: block;
-        padding-left: 4px;
+        padding-left: 0px;
       }
 
       .graph-legend-table .graph-legend-series {
@@ -53,6 +53,9 @@
   padding-top: 6px;
   position: relative;
 
+  // fix for Firefox (white stripe on the right of scrollbar)
+  width: calc(100% - 1px);
+
   .popover-content {
     padding: 0;
   }
@@ -60,6 +63,15 @@
 
 .graph-legend-content {
   position: relative;
+
+  // fix for Firefox (white stripe on the right of scrollbar)
+  width: calc(100% - 1px);
+}
+
+.graph-legend-scroll {
+  position: relative;
+  overflow: auto !important;
+  padding: 1px;
 }
 
 .graph-legend-icon {
@@ -71,8 +83,8 @@
 .graph-legend-icon,
 .graph-legend-alias,
 .graph-legend-value {
-  display: inline;
   cursor: pointer;
+  float: left;
   white-space: nowrap;
   font-size: 85%;
   text-align: left;
@@ -109,11 +121,6 @@
   }
 }
 
-// Don't move series to the right if legend is on the right as well
-.graph-panel--legend-right .graph-legend-series--right-y {
-  float: left;
-}
-
 .graph-legend-value {
   padding-left: 6px;
 }
@@ -122,8 +129,7 @@
 .body--phantomjs {
   .graph-panel--legend-right {
     .graph-legend {
-      display: block;
-      max-width: min-content;
+      display: inline-block;
     }
 
     .graph-panel__chart {
@@ -133,14 +139,24 @@
     .graph-legend-table {
       display: table;
       width: auto;
+
+      .graph-legend-scroll {
+        display: table;
+      }
     }
   }
 }
 
 .graph-legend-table {
-  padding-bottom: 1px;
-  padding-right: 5px;
-  padding-left: 5px;
+  tbody {
+    display: block;
+    position: relative;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-bottom: 1px;
+    padding-right: 5px;
+    padding-left: 5px;
+  }
 
   .graph-legend-series {
     display: table-row;

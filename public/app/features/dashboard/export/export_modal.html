@@ -11,6 +11,14 @@
 			tooltip="Useful for sharing dashboard publicly on grafana.com. Will templatize data source names. Can then only be used with the specific dashboard import API.">
 		</gf-form-switch>
 
+		<gf-form-switch
+			class="gf-form"
+			label="Export for sharing externally"
+			label-class="width-16"
+			checked="ctrl.shareExternally"
+			tooltip="Useful for sharing dashboard publicly on grafana.com. Will templatize data source names. Can then only be used with the specific dashboard import API.">
+		</gf-form-switch>
+
 		<div class="gf-form-button-row">
 			<button type="button" class="btn gf-form-btn width-10 btn-success" ng-click="ctrl.saveDashboardAsFile()">
 				<i class="fa fa-save"></i> Save to file

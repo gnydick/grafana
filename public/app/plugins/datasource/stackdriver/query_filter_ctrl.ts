@@ -1,4 +1,4 @@
-import coreModule from 'app/core/core_module';
+import angular from 'angular';
 import _ from 'lodash';
 import { FilterSegments } from './filter_segments';
 import appEvents from 'app/core/app_events';
@@ -81,22 +81,12 @@ export class StackdriverFilterCtrl {
   }
 
   async getCurrentProject() {
-    return new Promise(async (resolve, reject) => {
-      try {
-        if (!this.target.defaultProject || this.target.defaultProject === 'loading project...') {
-          this.target.defaultProject = await this.datasource.getDefaultProject();
-        }
-        resolve(this.target.defaultProject);
-      } catch (error) {
-        appEvents.emit('ds-request-error', error);
-        reject();
-      }
-    });
+    this.target.project = await this.datasource.getDefaultProject();
   }
 
   async loadMetricDescriptors() {
-    if (this.target.defaultProject !== 'loading project...') {
-      this.metricDescriptors = await this.datasource.getMetricTypes(this.target.defaultProject);
+    if (this.target.project.id !== 'default') {
+      this.metricDescriptors = await this.datasource.getMetricTypes(this.target.project.id);
       this.services = this.getServicesList();
       this.metrics = this.getMetricsList();
       return this.metricDescriptors;
@@ -139,7 +129,7 @@ export class StackdriverFilterCtrl {
       result = metrics.filter(m => m.service === this.target.service);
     }
 
-    if (result.find(m => m.value === this.templateSrv.replace(this.target.metricType))) {
+    if (result.find(m => m.value === this.target.metricType)) {
       this.metricType = this.target.metricType;
     } else if (result.length > 0) {
       this.metricType = this.target.metricType = result[0].value;
@@ -150,10 +140,10 @@ export class StackdriverFilterCtrl {
   async getLabels() {
     this.loadLabelsPromise = new Promise(async resolve => {
       try {
-        const { meta } = await this.datasource.getLabels(this.target.metricType, this.target.refId);
-        this.metricLabels = meta.metricLabels;
-        this.resourceLabels = meta.resourceLabels;
-        this.resourceTypes = meta.resourceTypes;
+        const data = await this.datasource.getLabels(this.target.metricType, this.target.refId);
+        this.metricLabels = data.results[this.target.refId].meta.metricLabels;
+        this.resourceLabels = data.results[this.target.refId].meta.resourceLabels;
+        this.resourceTypes = data.results[this.target.refId].meta.resourceTypes;
         resolve();
       } catch (error) {
         if (error.data && error.data.message) {
@@ -187,9 +177,7 @@ export class StackdriverFilterCtrl {
 
   setMetricType() {
     this.target.metricType = this.metricType;
-    const { valueType, metricKind, unit } = this.metricDescriptors.find(
-      m => m.type === this.templateSrv.replace(this.metricType)
-    );
+    const { valueType, metricKind, unit } = this.metricDescriptors.find(m => m.type === this.target.metricType);
     this.target.unit = unit;
     this.target.valueType = valueType;
     this.target.metricKind = metricKind;
@@ -321,5 +309,5 @@ export class StackdriverFilterCtrl {
   }
 }
 
-coreModule.directive('stackdriverFilter', StackdriverFilter);
-coreModule.controller('StackdriverFilterCtrl', StackdriverFilterCtrl);
+angular.module('grafana.controllers').directive('stackdriverFilter', StackdriverFilter);
+angular.module('grafana.controllers').controller('StackdriverFilterCtrl', StackdriverFilterCtrl);
