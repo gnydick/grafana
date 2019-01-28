@@ -19,6 +19,7 @@ export class OpenTsQueryCtrl extends QueryCtrl {
   addTagMode: boolean;
   addFilterMode: boolean;
   queryTypes: any;
+  expressions: any;
 
   /** @ngInject */
   constructor($scope, $injector) {
@@ -36,7 +37,7 @@ export class OpenTsQueryCtrl extends QueryCtrl {
       'literal_or',
       'regexp',
     ];
-    this.queryTypes = ['metric', 'gexp'];
+    this.queryTypes = ['metric', 'exp', 'gexp'];
 
     this.tsdbVersion = this.datasource.tsdbVersion;
 
@@ -141,6 +142,12 @@ export class OpenTsQueryCtrl extends QueryCtrl {
     this.addTagMode = false;
     return;
   }
+
+  addExpMetric() {}
+
+  addExpression() {}
+
+  addOutput() {}
 
   addFilter() {
     if (this.target.tags && _.size(this.target.tags) > 0) {

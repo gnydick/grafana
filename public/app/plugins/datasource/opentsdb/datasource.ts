@@ -1,6 +1,7 @@
 import angular from 'angular';
 import _ from 'lodash';
 import * as dateMath from 'app/core/utils/datemath';
+import { any } from 'prop-types';
 
 export default class OpenTsDatasource {
   type: any;
@@ -39,6 +40,7 @@ export default class OpenTsDatasource {
     const end = this.convertToTSDBTime(options.rangeRaw.to, true);
     const qs = [];
     const gExps = [];
+    const exp = any;
 
     _.each(options.targets, target => {
       if (!target.metric && !target.gexp) {
@@ -56,9 +58,10 @@ export default class OpenTsDatasource {
 
     const queries = _.compact(qs);
     const gExpressions = _.compact(gExps);
+    const expressions = _.compact(exp);
 
     // No valid targets, return the empty result to save a round trip.
-    if (_.isEmpty(queries) && _.isEmpty(gExpressions)) {
+    if (_.isEmpty(queries) && _.isEmpty(gExpressions) && _.isEmpty(expressions)) {
       const d = this.$q.defer();
       d.resolve({ data: [] });
       return d.promise;
@@ -76,6 +79,29 @@ export default class OpenTsDatasource {
         });
       }
     });
+
+    let expPromises;
+    if (queries.length > 0) {
+      expPromises = this.performTimeSeriesQuery(queries, start, end).then(response => {
+        // only index into classic 'metrics' queries
+        const tsqTargets = options.targets.filter(target => {
+          return target.queryType === 'metric';
+        });
+
+        const metricToTargetMapping = this.mapMetricsToTargets(response.data, options, tsqTargets, this.tsdbVersion);
+
+        const result = _.map(response.data, (metricData, index) => {
+          index = metricToTargetMapping[index];
+          if (index === -1) {
+            index = 0;
+          }
+          this._saveTagKeys(metricData);
+
+          return this.transformMetricData(metricData, groupByTags, tsqTargets[index], options, this.tsdbResolution);
+        });
+        return result;
+      });
+    }
 
     let queriesPromise;
     if (queries.length > 0) {
@@ -133,7 +159,7 @@ export default class OpenTsDatasource {
     }
 
     // call all queries into an array and concaternate their data into a return object
-    const tsdbQueryPromises = [queriesPromise].concat(gexpPromises);
+    const tsdbQueryPromises = [queriesPromise].concat(gexpPromises).concat(expPromises);
 
     // q.all([]) resolves all promises while keeping order in the return array
     // (see: https://docs.angularjs.org/api/ng/service/$q#all)
@@ -241,6 +267,39 @@ export default class OpenTsDatasource {
     const options = {
       method: 'POST',
       url: this.url + '/api/query',
+      data: reqBody,
+    };
+
+    this._addCredentialOptions(options);
+    return this.backendSrv.datasourceRequest(options);
+  }
+
+  // retrieve expression Metrics via POST to /api/query/exp
+  performExpTimeSeriesQuery(metrics, expressions, outputs, start, end) {
+    let msResolution = false;
+    if (this.tsdbResolution === 2) {
+      msResolution = true;
+    }
+    const reqBody: any = {
+      start: start,
+      metrics: metrics,
+      expressions: expressions,
+      outputs: outputs,
+      msResolution: msResolution,
+      globalAnnotations: true,
+    };
+    if (this.tsdbVersion === 3) {
+      reqBody.showQuery = true;
+    }
+
+    // Relative queries (e.g. last hour) don't include an end time
+    if (end) {
+      reqBody.end = end;
+    }
+
+    const options = {
+      method: 'POST',
+      url: this.url + '/api/query/exp',
       data: reqBody,
     };
 

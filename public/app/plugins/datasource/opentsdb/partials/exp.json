@@ -1,0 +1,59 @@
+{
+  "time": {
+    "start": "6h-ago",
+    "aggregator":"sum"
+  },
+  "filters": [
+    {
+      "tags": [
+        {
+          "type": "wildcard",
+          "tagk": "container_name",
+          "filter": "*",
+          "groupBy": true
+        }
+      ],
+      "id": "f1"
+    }
+  ],
+  "metrics": [
+    {
+      "id": "a",
+      "metric": "container_cpu_system_seconds_total",
+      "filter": "f1",
+      "fillPolicy":{"policy":"nan"}
+    },
+    {
+      "id": "b",
+      "metric": "sys.cpu.iowait",
+      "filter": "f1",
+      "fillPolicy":{"policy":"nan"}
+    }
+  ],
+  "expressions": [
+    {
+      "id": "e",
+      "expr": "a + b"
+    },
+    {
+      "id":"e2",
+      "expr": "e * 2"
+    },
+    {
+      "id":"e3",
+      "expr": "e2 * 2"
+    },
+    {
+      "id":"e4",
+      "expr": "e3 * 2"
+    },
+    {
+      "id":"e5",
+      "expr": "e4 + e2"
+    }
+  ],
+  "outputs":[
+    {"id":"e5", "alias":"Mega expression"},
+    {"id":"a", "alias":"CPU User"}
+  ]
+}
