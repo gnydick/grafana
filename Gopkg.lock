@@ -639,9 +639,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:706aaf5e43c7dc00fe3fe91015cf8ef07e50736356c8acf924a061ccb1845237"
+  digest = "1:758f363e0dff33cf00b234be2efb12f919d79b42d5ae3909ff9eb69ef2c3cca5"
   name = "golang.org/x/crypto"
   packages = [
+    "ed25519",
+    "ed25519/internal/edwards25519",
     "md4",
     "pbkdf2",
   ]
@@ -837,6 +839,18 @@
   version = "v2.3.2"
 
 [[projects]]
+  digest = "1:b36ebe2478bf5da49c27d8c49d75d1d5cc7fdbd6be1ab464916f9c3a3e3228a4"
+  name = "gopkg.in/square/go-jose.v2"
+  packages = [
+    ".",
+    "cipher",
+    "json",
+  ]
+  pruneopts = "NUT"
+  revision = "e94fb177d3668d35ab39c61cbb2f311550557e83"
+  version = "v2.2.2"
+
+[[projects]]
   branch = "v2"
   digest = "1:18108594151654e9e696b27b181b953f9a90b16bf14d253dd1b397b025a1487f"
   name = "gopkg.in/yaml.v2"
@@ -900,6 +914,7 @@
     "github.com/opentracing/opentracing-go/ext",
     "github.com/opentracing/opentracing-go/log",
     "github.com/patrickmn/go-cache",
+    "github.com/pkg/errors",
     "github.com/prometheus/client_golang/api",
     "github.com/prometheus/client_golang/api/prometheus/v1",
     "github.com/prometheus/client_golang/prometheus",
@@ -920,6 +935,7 @@
     "gopkg.in/ini.v1",
     "gopkg.in/macaron.v1",
     "gopkg.in/mail.v2",
+    "gopkg.in/square/go-jose.v2",
     "gopkg.in/yaml.v2",
   ]
   solver-name = "gps-cdcl"
