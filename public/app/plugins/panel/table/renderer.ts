@@ -1,12 +1,21 @@
 import _ from 'lodash';
 import moment from 'moment';
 import kbn from 'app/core/utils/kbn';
+import { getColorFromHexRgbOrName } from '@grafana/ui';
+import { GrafanaTheme } from '@grafana/ui';
 
 export class TableRenderer {
   formatters: any[];
   colorState: any;
 
-  constructor(private panel, private table, private isUtc, private sanitize, private templateSrv) {
+  constructor(
+    private panel,
+    private table,
+    private isUtc,
+    private sanitize,
+    private templateSrv,
+    private theme?: GrafanaTheme
+  ) {
     this.initColumns();
   }
 
@@ -49,10 +58,10 @@ export class TableRenderer {
     }
     for (let i = style.thresholds.length; i > 0; i--) {
       if (value >= style.thresholds[i - 1]) {
-        return style.colors[i];
+        return getColorFromHexRgbOrName(style.colors[i], this.theme);
       }
     }
-    return _.first(style.colors);
+    return getColorFromHexRgbOrName(_.first(style.colors), this.theme);
   }
 
   defaultCellFormatter(v, style) {
@@ -91,7 +100,14 @@ export class TableRenderer {
         if (_.isArray(v)) {
           v = v[0];
         }
+
+        // if is an epoch (numeric string and len > 12)
+        if (_.isString(v) && !isNaN(v) && v.length > 12) {
+          v = parseInt(v, 10);
+        }
+
         let date = moment(v);
+
         if (this.isUtc) {
           date = date.utc();
         }

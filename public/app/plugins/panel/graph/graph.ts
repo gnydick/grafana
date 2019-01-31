@@ -26,6 +26,7 @@ import ReactDOM from 'react-dom';
 import { Legend, GraphLegendProps } from './Legend/Legend';
 
 import { GraphCtrl } from './module';
+import { GrafanaTheme } from '@grafana/ui';
 
 class GraphElement {
   ctrl: GraphCtrl;
@@ -51,7 +52,10 @@ class GraphElement {
     this.panelWidth = 0;
     this.eventManager = new EventManager(this.ctrl);
     this.thresholdManager = new ThresholdManager(this.ctrl);
-    this.timeRegionManager = new TimeRegionManager(this.ctrl);
+    this.timeRegionManager = new TimeRegionManager(
+      this.ctrl,
+      config.bootData.user.lightTheme ? GrafanaTheme.Light : GrafanaTheme.Dark
+    );
     this.tooltip = new GraphTooltip(this.elem, this.ctrl.dashboard, this.scope, () => {
       return this.sortedSeries;
     });
@@ -737,7 +741,7 @@ class GraphElement {
     if (min && max && ticks) {
       const range = max - min;
       const secPerTick = range / ticks / 1000;
-      // Need have 10 milisecond margin on the day range
+      // Need have 10 millisecond margin on the day range
       // As sometimes last 24 hour dashboard evaluates to more than 86400000
       const oneDay = 86400010;
       const oneYear = 31536000000;

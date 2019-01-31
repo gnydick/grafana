@@ -19,13 +19,13 @@ If you have any problems please read the [troubleshooting guide](http://docs.gra
 Be sure to read the [getting started guide](http://docs.grafana.org/guides/gettingstarted/) and the other feature guides.
 
 ## Run from master
-If you want to build a package yourself, or contribute - Here is a guide for how to do that. You can always find
+If you want to build a package yourself, or contribute - here is a guide for how to do that. You can always find
 the latest master builds [here](https://grafana.com/grafana/download)
 
 ### Dependencies
 
 - Go (Latest Stable)
-- NodeJS LTS
+- Node.js LTS
 
 ### Building the backend
 ```bash
@@ -37,7 +37,7 @@ go run build.go build
 
 ### Building frontend assets
 
-For this you need nodejs (v.6+).
+For this you need Node.js (LTS version).
 
 To build the assets, rebuild on file change, and serve them by Grafana's webserver (http://localhost:3000):
 ```bash
@@ -71,7 +71,7 @@ Open grafana in your browser (default: `http://localhost:3000`) and login with a
 
 ### Building a Docker image
 
-There are two different ways to build a Grafana docker image. If you're machine is setup for Grafana development and you run linux/amd64 you can build just the image. Otherwise, there is the option to build Grafana completely within Docker.
+There are two different ways to build a Grafana docker image. If your machine is setup for Grafana development and you run linux/amd64 you can build just the image. Otherwise, there is the option to build Grafana completely within Docker.
 
 Run the image you have built using: `docker run --rm -p 3000:3000 grafana/grafana:dev`
 
@@ -89,6 +89,8 @@ Choose this option to build on platforms other than linux/amd64 and/or not have 
 1. `make build-docker-full` or `docker build -t grafana/grafana:dev .`
 
 The resulting image will be tagged as `grafana/grafana:dev`
+
+Notice: If you are using Docker for MacOS, be sure to set the memory limit to be larger than 2 GiB (at docker -> Preferences -> Advanced), otherwise `grunt build` may fail.
 
 ### Dev config
 
@@ -127,9 +129,11 @@ GRAFANA_TEST_DB=postgres go test ./pkg/...
 
 ## Contribute
 
-If you have any idea for an improvement or found a bug, do not hesitate to open an issue.
-And if you have time clone this repo and submit a pull request and help me make Grafana
-the kickass metrics & devops dashboard we all dream about!
+If you have any ideas for improvement or have found a bug, do not hesitate to open an issue.
+And if you have time, clone this repo and submit a pull request to help me make Grafana
+the kickass metrics & devops dashboard we all dream about! 
+
+Read the [contributing](https://github.com/grafana/grafana/blob/master/CONTRIBUTING.md) guide then check the [`beginner friendly`](https://github.com/grafana/grafana/issues?q=is%3Aopen+is%3Aissue+label%3A%22beginner+friendly%22) label to find issues that are easy and that we would like help with.
 
 ## Plugin development
 

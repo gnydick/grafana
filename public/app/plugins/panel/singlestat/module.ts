@@ -2,12 +2,14 @@ import _ from 'lodash';
 import $ from 'jquery';
 import 'vendor/flot/jquery.flot';
 import 'vendor/flot/jquery.flot.gauge';
-import 'app/features/dashboard/panellinks/link_srv';
+import 'app/features/panel/panellinks/link_srv';
 
 import kbn from 'app/core/utils/kbn';
 import config from 'app/core/config';
 import TimeSeries from 'app/core/time_series2';
 import { MetricsPanelCtrl } from 'app/plugins/sdk';
+import { getColorFromHexRgbOrName } from '@grafana/ui';
+import { GrafanaTheme } from '@grafana/ui';
 
 class SingleStatCtrl extends MetricsPanelCtrl {
   static templateUrl = 'module.html';
@@ -312,14 +314,20 @@ class SingleStatCtrl extends MetricsPanelCtrl {
         const formatFunc = kbn.valueFormats[this.panel.format];
         data.value = lastPoint[1];
         data.valueRounded = data.value;
-        data.valueFormatted = formatFunc(data.value, this.dashboard.isTimezoneUtc());
+        data.valueFormatted = formatFunc(data.value, 0, 0, this.dashboard.isTimezoneUtc());
       } else {
         data.value = this.series[0].stats[this.panel.valueName];
         data.flotpairs = this.series[0].flotpairs;
 
         const decimalInfo = this.getDecimalsForValue(data.value);
         const formatFunc = kbn.valueFormats[this.panel.format];
-        data.valueFormatted = formatFunc(data.value, decimalInfo.decimals, decimalInfo.scaledDecimals);
+
+        data.valueFormatted = formatFunc(
+          data.value,
+          decimalInfo.decimals,
+          decimalInfo.scaledDecimals,
+          this.dashboard.isTimezoneUtc()
+        );
         data.valueRounded = kbn.roundValue(data.value, decimalInfo.decimals);
       }
 
@@ -473,6 +481,7 @@ class SingleStatCtrl extends MetricsPanelCtrl {
       plotCanvas.css(plotCss);
 
       const thresholds = [];
+
       for (let i = 0; i < data.thresholds.length; i++) {
         thresholds.push({
           value: data.thresholds[i],
@@ -580,7 +589,10 @@ class SingleStatCtrl extends MetricsPanelCtrl {
             fill: 1,
             zero: false,
             lineWidth: 1,
-            fillColor: panel.sparkline.fillColor,
+            fillColor: getColorFromHexRgbOrName(
+              panel.sparkline.fillColor,
+              config.bootData.user.lightTheme ? GrafanaTheme.Light : GrafanaTheme.Dark
+            ),
           },
         },
         yaxes: { show: false },
@@ -597,7 +609,10 @@ class SingleStatCtrl extends MetricsPanelCtrl {
 
       const plotSeries = {
         data: data.flotpairs,
-        color: panel.sparkline.lineColor,
+        color: getColorFromHexRgbOrName(
+          panel.sparkline.lineColor,
+          config.bootData.user.lightTheme ? GrafanaTheme.Light : GrafanaTheme.Dark
+        ),
       };
 
       $.plot(plotCanvas, [plotSeries], options);
@@ -613,12 +628,17 @@ class SingleStatCtrl extends MetricsPanelCtrl {
       data.thresholds = panel.thresholds.split(',').map(strVale => {
         return Number(strVale.trim());
       });
-      data.colorMap = panel.colors;
+
+      // Map panel colors to hex or rgb/a values
+      data.colorMap = panel.colors.map(color =>
+        getColorFromHexRgbOrName(color, config.bootData.user.lightTheme ? GrafanaTheme.Light : GrafanaTheme.Dark)
+      );
 
       const body = panel.gauge.show ? '' : getBigValueHtml();
 
       if (panel.colorBackground) {
         const color = getColorForValue(data, data.value);
+        console.log(color);
         if (color) {
           $panelContainer.css('background-color', color);
           if (scope.fullscreen) {
