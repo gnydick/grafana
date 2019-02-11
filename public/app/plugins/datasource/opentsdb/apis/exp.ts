@@ -12,7 +12,7 @@ export default class ExpQuery {
   }
 
   registerTarget(target, options) {
-    this.qs.push(this.convertTargetToQuery(target));
+    this.qs.push(this.convertTargetToQuery(target, options));
     this.options = options;
   }
 
@@ -25,7 +25,7 @@ export default class ExpQuery {
     // No valid targets, return the empty result to save a round trip.
     if (_.isEmpty(queries)) {
       const d = this.datasource.$q.defer();
-      d.resolve({data: []});
+      d.resolve({ data: [] });
       return d.promise;
     }
 
@@ -56,7 +56,9 @@ export default class ExpQuery {
               if (index === -1) {
                 index = 0;
               }
-              result = result.concat(this.transformMetricData(queryData, targets[index], this.datasource.tsdbResolution));
+              result = result.concat(
+                this.transformMetricData(queryData, targets[index], this.datasource.tsdbResolution)
+              );
             });
 
             return result.filter(value => {
@@ -113,22 +115,25 @@ export default class ExpQuery {
 
         if (seriesIndex > 0) {
           _.map(result.dps, (valuesForTimeSlot, timeSlotIndex) => {
-
             if (timeSlotIndex > 0) {
               if (targetName in targets) {
                 if (!('datapoints' in targets[targetName])) {
                   console.log(targets[targetName]);
                 } else {
                   if (tsdbResolution === 2) {
-                    targets[targetName]['datapoints'].push([1 * valuesForTimeSlot[seriesIndex], valuesForTimeSlot[0] * 1]);
+                    targets[targetName]['datapoints'].push([
+                      1 * valuesForTimeSlot[seriesIndex],
+                      valuesForTimeSlot[0] * 1,
+                    ]);
                   } else {
-                    targets[targetName]['datapoints'].push([1 * valuesForTimeSlot[seriesIndex], valuesForTimeSlot[0] * 1000]);
+                    targets[targetName]['datapoints'].push([
+                      1 * valuesForTimeSlot[seriesIndex],
+                      valuesForTimeSlot[0] * 1000,
+                    ]);
                   }
                 }
               }
             }
-
-
           });
         }
       }
@@ -155,7 +160,6 @@ export default class ExpQuery {
   nameSeries(seriesMeta) {
     let name = seriesMeta.id;
     if (Object.keys(seriesMeta.commonTags).length > 0) {
-
       name += '{';
       const arr = new Array();
       for (const i in seriesMeta.commonTags) {
@@ -175,12 +179,13 @@ export default class ExpQuery {
     }
   }
 
-  convertTargetToQuery(target) {
+  convertTargetToQuery(target, options) {
     // filter out a target if it is 'hidden'
     if (target.hide === true) {
       return null;
     }
-    return JSON.parse(target.exp);
+
+    return JSON.parse(this.datasource.templateSrv.replace(target.exp, options.scopedVars, 'pipe'));
   }
 
   mapMetricsToTargets(outputs, queryUrl) {
