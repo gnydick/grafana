@@ -254,7 +254,7 @@ export default class OpenTsDatasource {
 
     const m = metric + '{' + keysQuery + '}';
 
-    return this._get('/api/search/lookup', { m: m, limit: 3000 }).then(result => {
+    return this._get('/api/search/lookup', { m: m, limit: 3000, use_meta: true }).then(result => {
       result = result.data.results;
       const tagvs = [];
       _.each(result, r => {
@@ -271,7 +271,7 @@ export default class OpenTsDatasource {
       return this.$q.when([]);
     }
 
-    return this._get('/api/search/lookup', { m: metric, limit: 1000 }).then(result => {
+    return this._get('/api/search/lookup', { m: metric, limit: 3000, use_meta: true }).then(result => {
       result = result.data.results;
       const tagks = [];
       _.each(result, r => {
