@@ -1,3 +1,9 @@
 [submodule "data/plugins/simple-json-datasource"]
 	path = data/plugins/simple-json-datasource
 	url = git@github.com:grafana/simple-json-datasource.git
+[submodule "data/plugins/orch"]
+	path = data/plugins/orch
+	url = git@github.com:grafana/simple-json-datasource.git
+[submodule "orch"]
+	path = data/plugins/simple-json-datasource
+	url = git@github.com:grafana/simple-json-datasource.git
